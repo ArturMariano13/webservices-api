@@ -1,0 +1,333 @@
+openapi: 3.0.0
+info:
+  title: API de Gerenciamento de Tarefas e Projetos
+  description: Uma API RESTful para gerenciar projetos e tarefas. Esta especificação descreve os endpoints, entradas e saídas da API, seguindo a arquitetura de Controller, Service e Model.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /projects:
+    get:
+      summary: Lista todos os projetos
+      description: Retorna uma lista de todos os projetos disponíveis no sistema.
+      responses:
+        '200':
+          description: OK - Lista de projetos retornada com sucesso.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+    post:
+      summary: Cria um novo projeto
+      description: Adiciona um novo projeto ao sistema.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Created - Projeto criado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Bad Request - Dados de entrada inválidos.
+  /projects/{projectId}:
+    get:
+      summary: Retorna um projeto por ID
+      description: Busca e retorna um projeto específico usando seu ID.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único do projeto.
+      responses:
+        '200':
+          description: OK - Projeto retornado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          description: Not Found - Projeto não encontrado.
+    put:
+      summary: Atualiza um projeto existente
+      description: Atualiza os dados de um projeto existente usando seu ID.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único do projeto a ser atualizado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '200':
+          description: OK - Projeto atualizado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Bad Request - Dados de entrada inválidos.
+        '404':
+          description: Not Found - Projeto não encontrado.
+    delete:
+      summary: Deleta um projeto
+      description: Remove um projeto do sistema usando seu ID.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único do projeto a ser deletado.
+      responses:
+        '204':
+          description: No Content - Projeto deletado com sucesso.
+        '404':
+          description: Not Found - Projeto não encontrado.
+  /projects/{projectId}/tasks:
+    get:
+      summary: Lista as tarefas de um projeto
+      description: Retorna uma lista de todas as tarefas associadas a um projeto específico.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único do projeto.
+      responses:
+        '200':
+          description: OK - Lista de tarefas retornada com sucesso. Pode ser uma lista vazia se o projeto não tiver tarefas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+    post:
+      summary: Cria uma nova tarefa para um projeto
+      description: Adiciona uma nova tarefa a um projeto específico.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único do projeto.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Created - Tarefa criada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad Request - Dados de entrada inválidos.
+  /tasks/{taskId}:
+    get:
+      summary: Retorna uma tarefa por ID
+      description: Busca e retorna uma tarefa específica usando seu ID.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único da tarefa.
+      responses:
+        '200':
+          description: OK - Tarefa retornada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Not Found - Tarefa não encontrada.
+    put:
+      summary: Atualiza uma tarefa existente
+      description: Atualiza os dados de uma tarefa existente usando seu ID.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único da tarefa a ser atualizada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: OK - Tarefa atualizada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Bad Request - Dados de entrada inválidos.
+        '404':
+          description: Not Found - Tarefa não encontrada.
+    delete:
+      summary: Deleta uma tarefa
+      description: Remove uma tarefa do sistema usando seu ID.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: O ID único da tarefa a ser deletada.
+      responses:
+        '204':
+          description: No Content - Tarefa deletada com sucesso.
+        '404':
+          description: Not Found - Tarefa não encontrada.
+components:
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único do projeto.
+        title:
+          type: string
+          description: Título do projeto.
+        description:
+          type: string
+          description: Descrição detalhada do projeto.
+        status:
+          type: string
+          enum: [ativo, arquivado, concluido]
+          default: ativo
+          description: Status atual do projeto.
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação do projeto.
+    ProjectCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Título do projeto.
+        description:
+          type: string
+          description: Descrição do projeto.
+        status:
+          type: string
+          enum: [ativo, arquivado, concluido]
+          default: ativo
+          description: Status inicial do projeto.
+      required:
+        - title
+        - description
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único da tarefa.
+        projectId:
+          type: string
+          format: uuid
+          description: ID do projeto ao qual a tarefa pertence.
+        title:
+          type: string
+          description: Título da tarefa.
+        description:
+          type: string
+          description: Descrição da tarefa.
+        status:
+          type: string
+          enum: [a_fazer, em_progresso, concluido]
+          default: a_fazer
+          description: Status atual da tarefa.
+        dueDate:
+          type: string
+          format: date
+          description: Data de vencimento da tarefa.
+        assignedTo:
+          type: string
+          format: uuid
+          description: ID do usuário responsável pela tarefa.
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação da tarefa.
+    TaskCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Título da tarefa.
+        description:
+          type: string
+          description: Descrição da tarefa.
+        status:
+          type: string
+          enum: [a_fazer, em_progresso, concluido]
+          default: a_fazer
+          description: Status inicial da tarefa.
+        dueDate:
+          type: string
+          format: date
+          description: Data de vencimento da tarefa.
+        assignedTo:
+          type: string
+          format: uuid
+          description: ID do usuário responsável pela tarefa.
+      required:
+        - title
+        - description
+        - assignedTo
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [a_fazer, em_progresso, concluido]
+        dueDate:
+          type: string
+          format: date
+        assignedTo:
+          type: string
+          format: uuid
