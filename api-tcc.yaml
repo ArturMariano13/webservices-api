@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Cycling Recommender API
+  version: "1.0.0"
+  description: API para ingestão de trajetórias representativas e geração de recomendações personalizadas para ciclistas via agente LLM.
+servers:
+  - url: https://api.seuprojeto.org/api/v1
+    description: Produção
+  - url: http://localhost:8000/api/v1
+    description: Desenvolvimento
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    Point:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+        poi:
+          type: string
+          description: opcional, nome do POI associado
+      required: [lat, lon, timestamp]
+
+    Trajectory:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/Point'
+        summary:
+          type: string
+        frequency:
+          type: string
+        durationAvg:
+          type: number
+          description: duração média em minutos
+        createdAt:
+          type: string
+          format: date-time
+      required: [userId, points]
+
+    Weather:
+      type: object
+      properties:
+        condition:
+          type: string
+        precipitationProbability:
+          type: number
+        temperature:
+          type: number
+
+    Context:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        location:
+          type: object
+          properties:
+            lat: { type: number, format: double }
+            lon: { type: number, format: double }
+        weather:
+          $ref: '#/components/schemas/Weather'
+        trafficLevel:
+          type: string
+          enum: [low, moderate, high]
+        event:
+          type: string
+
+    RecommendationRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        context:
+          $ref: '#/components/schemas/Context'
+        options:
+          type: object
+          additionalProperties: true
+        historyWindow:
+          type: integer
+          description: número de dias do histórico a considerar
+      required: [userId, context]
+
+    Recommendation:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        createdAt: { type: string, format: date-time }
+        text: { type: string }
+        reasoning: { type: string }
+        score: { type: number, format: float }
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              payload: { type: object }
+      required: [id, userId, text]
+
+    Pattern:
+      type: object
+      properties:
+        userId: { type: string }
+        frequentPlaces:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              lat: { type: number, format: double }
+              lon: { type: number, format: double }
+              visitsPerWeek: { type: number }
+        timeSlots:
+          type: array
+          items:
+            type: object
+            properties:
+              slot: { type: string }
+              frequency: { type: number }
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /trajectories:
+    post:
+      summary: Registrar trajetória representativa
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Trajectory'
+      responses:
+        '201':
+          description: Trajectory created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trajectory'
+        '400':
+          description: Bad request
+
+  /users/{userId}/patterns:
+    get:
+      summary: Obter padrões de mobilidade de um usuário
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patterns retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pattern'
+        '404':
+          description: Not found
+
+  /users/{userId}/recommendations:
+    post:
+      summary: Solicitar recomendações para um usuário
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendationRequest'
+      responses:
+        '200':
+          description: Recommendation returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recommendation'
+        '400':
+          description: Bad request
+
+  /users/{userId}/recommendations/{recId}:
+    get:
+      summary: Consultar recomendação específica
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recommendation retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recommendation'
+        '404':
+          description: Not found
+
+  /context:
+    post:
+      summary: Ingestão de dados contextuais (ex. de serviços externos)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Context'
+      responses:
+        '200':
+          description: Context accepted
+
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
